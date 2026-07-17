@@ -169,6 +169,17 @@ router.post('/checkin', authMiddleware, async (req: any, res: any) => {
       }
     });
 
+    // Update Registration status if exists
+    await prisma.registration.updateMany({
+      where: {
+        userId,
+        activityId: targetActivityId
+      },
+      data: {
+        status: 'Có tham gia'
+      }
+    });
+
     const activityInfo = await prisma.activity.findUnique({ where: { id: targetActivityId } });
     
     res.json({ message: `Điểm danh thành công! Lịch sử tham gia sự kiện đã được ghi nhận.`, evidence });

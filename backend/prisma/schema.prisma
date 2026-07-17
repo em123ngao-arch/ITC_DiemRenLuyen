@@ -17,12 +17,16 @@ model User {
   classId   String?
   cohortId  String?
   majorId   String?
+  educationLevelId String?
+  clubId    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   class     Class?   @relation(fields: [classId], references: [id])
   cohort    Cohort?  @relation(fields: [cohortId], references: [id])
   major     Major?   @relation(fields: [majorId], references: [id])
+  educationLevel EducationLevel? @relation(fields: [educationLevelId], references: [id])
+  club      Club?    @relation(fields: [clubId], references: [id])
   evidences Evidence[]
   points    Point[]
   registrations Registration[]
@@ -36,11 +40,13 @@ model Class {
   facultyId String?
   majorId   String?
   cohortId  String?
+  educationLevelId String?
 
   users     User[]
   faculty   Faculty? @relation(fields: [facultyId], references: [id])
   major     Major?   @relation(fields: [majorId], references: [id])
   cohort    Cohort?  @relation(fields: [cohortId], references: [id])
+  educationLevel EducationLevel? @relation(fields: [educationLevelId], references: [id])
 }
 
 model Activity {
@@ -64,6 +70,7 @@ model Registration {
   id          String   @id @default(uuid())
   userId      String
   activityId  String
+  status      String   @default("Đã đăng ký") // Đã đăng ký, Có tham gia, Vắng mặt, Không đủ điều kiện
   createdAt   DateTime @default(now())
 
   user        User     @relation(fields: [userId], references: [id])
@@ -130,6 +137,19 @@ model Cohort {
   id        String   @id @default(uuid())
   name      String
   classes   Class[]
+  users     User[]
+}
+
+model EducationLevel {
+  id        String   @id @default(uuid())
+  name      String
+  classes   Class[]
+  users     User[]
+}
+
+model Club {
+  id        String   @id @default(uuid())
+  name      String
   users     User[]
 }
 

@@ -14,6 +14,11 @@ router.post('/sync', authMiddleware, async (req: any, res: any) => {
       return res.status(400).json({ message: 'Dữ liệu không hợp lệ!' });
     }
 
+    const currentSemester = await prisma.semester.findUnique({ where: { id: semester } });
+    if (currentSemester?.isLocked) {
+      return res.status(403).json({ message: 'Học kỳ đã bị khóa, không thể đồng bộ điểm!' });
+    }
+
     // studentsData is expected to be: [{ mssv: '5012...', rank: 'Xuất sắc' }, ...]
     
     await Promise.all(studentsData.map(async (student: any) => {
@@ -119,6 +124,11 @@ router.post('/submit', authMiddleware, async (req: any, res: any) => {
     const { score, isDraft = false, semester = 'HK1_2025-2026', details, proofs } = req.body;
     const status = isDraft ? 'Chưa đánh giá' : 'Chờ duyệt';
 
+    const currentSemester = await prisma.semester.findUnique({ where: { id: semester } });
+    if (currentSemester?.isLocked) {
+      return res.status(403).json({ message: 'Học kỳ đã bị khóa, không thể nộp điểm!' });
+    }
+
     const existingPoint = await prisma.point.findFirst({
       where: { userId, semester }
     });
@@ -215,6 +225,11 @@ router.post('/appeal', authMiddleware, async (req: any, res: any) => {
     const userId = req.user.id;
     const { reason, proofUrl, semester = 'HK1_2025-2026' } = req.body;
 
+    const currentSemester = await prisma.semester.findUnique({ where: { id: semester } });
+    if (currentSemester?.isLocked) {
+      return res.status(403).json({ message: 'Học kỳ đã bị khóa, không thể nộp đơn phúc khảo!' });
+    }
+
     const existingPoint = await prisma.point.findFirst({
       where: { userId, semester }
     });
@@ -260,6 +275,11 @@ router.put('/:userId/grade', authMiddleware, async (req: any, res: any) => {
   try {
     const { userId } = req.params;
     const { score, status, feedback, details, semester = 'HK1_2025-2026' } = req.body;
+
+    const currentSemester = await prisma.semester.findUnique({ where: { id: semester } });
+    if (currentSemester?.isLocked) {
+      return res.status(403).json({ message: 'Học kỳ đã bị khóa, không thể duyệt điểm!' });
+    }
 
     const existingPoint = await prisma.point.findFirst({
       where: { userId, semester }

@@ -6,9 +6,11 @@ import { useOutletContext } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { Tabs } from 'antd';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { TabPane } = Tabs;
 
 export const Reports: React.FC = () => {
   const { currentUser } = useOutletContext<{ currentUser: any }>();
@@ -17,6 +19,11 @@ export const Reports: React.FC = () => {
   const [semester, setSemester] = useState('HK1_2025-2026');
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [filteredData, setFilteredData] = useState<any[]>([]);
+  
+  // New state
+  const [categories, setCategories] = useState<any>({ faculties: [], majors: [], cohorts: [], educationLevels: [] });
+  const [statusReport, setStatusReport] = useState<any[]>([]);
+  const [issuesReport, setIssuesReport] = useState<any[]>([]);
 
   const fetchUsers = async () => {
     try {
@@ -50,8 +57,24 @@ export const Reports: React.FC = () => {
     }
   };
 
+  const fetchCategoriesAndReports = async () => {
+    try {
+      const [catRes, statusRes, issuesRes] = await Promise.all([
+        api.get('/settings/categories'),
+        api.get('/reports/status?semester=' + semester),
+        api.get('/reports/issues?semester=' + semester)
+      ]);
+      setCategories(catRes.data);
+      setStatusReport(statusRes.data);
+      setIssuesReport(issuesRes.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchCategoriesAndReports();
   }, [semester]);
 
   const computeStats = (data: any[]) => {
@@ -197,69 +220,96 @@ export const Reports: React.FC = () => {
       </Row>
 
       <Card className="shadow-sm">
-        <Form form={form} layout="inline" className="mb-6 flex-wrap gap-y-4" onFinish={handleFilter}>
-          <Form.Item name="faculty" label="Khoa">
-            <Select disabled showSearch optionFilterProp="children" placeholder="Chọn Khoa" style={{ width: 150 }} defaultValue="all">
-              <Option value="all">Tất cả</Option>
-              <Option value="cntt">CNTT</Option>
-              <Option value="qtkt">QTKT</Option>
-            </Select>
-          </Form.Item>
-          
-          <Form.Item name="major" label="Ngành">
-            <Select disabled showSearch optionFilterProp="children" placeholder="Chọn Ngành" style={{ width: 150 }} defaultValue="all">
-              <Option value="all">Tất cả</Option>
-              <Option value="khmt">KHMT</Option>
-              <Option value="httt">HTTT</Option>
-            </Select>
-          </Form.Item>
+        <Tabs defaultActiveKey="1">
+          <TabPane tab="Báo cáo Tổng hợp" key="1">
+            <Form form={form} layout="inline" className="mb-6 flex-wrap gap-y-4" onFinish={handleFilter}>
+              <Form.Item name="faculty" label="Khoa">
+                <Select showSearch optionFilterProp="children" placeholder="Chọn Khoa" style={{ width: 150 }} defaultValue="all">
+                  <Option value="all">Tất cả</Option>
+                  {categories.faculties.map((f: any) => <Option key={f.id} value={f.id}>{f.name}</Option>)}
+                </Select>
+              </Form.Item>
+              
+              <Form.Item name="major" label="Ngành">
+                <Select showSearch optionFilterProp="children" placeholder="Chọn Ngành" style={{ width: 150 }} defaultValue="all">
+                  <Option value="all">Tất cả</Option>
+                  {categories.majors.map((m: any) => <Option key={m.id} value={m.id}>{m.name}</Option>)}
+                </Select>
+              </Form.Item>
 
-          <Form.Item name="batch" label="Khóa">
-            <Select disabled showSearch optionFilterProp="children" placeholder="Chọn Khóa" style={{ width: 120 }} defaultValue="all">
-              <Option value="all">Tất cả</Option>
-              <Option value="k24">Khóa 24</Option>
-              <Option value="k25">Khóa 25</Option>
-            </Select>
-          </Form.Item>
+              <Form.Item name="batch" label="Khóa">
+                <Select showSearch optionFilterProp="children" placeholder="Chọn Khóa" style={{ width: 120 }} defaultValue="all">
+                  <Option value="all">Tất cả</Option>
+                  {categories.cohorts.map((c: any) => <Option key={c.id} value={c.id}>{c.name}</Option>)}
+                </Select>
+              </Form.Item>
 
-          <Form.Item name="class" label="Lớp" initialValue={(currentUser?.role === 'Lớp trưởng' || currentUser?.role === 'Cố vấn học tập') ? currentUser?.classId : "all"}>
-            <Select 
-              showSearch 
-              optionFilterProp="children" 
-              style={{ width: 120 }}
-              disabled={(currentUser?.role === 'Lớp trưởng' || currentUser?.role === 'Cố vấn học tập')}
-            >
-              <Option value="all">Tất cả Lớp</Option>
-              {(currentUser?.role === 'Lớp trưởng' || currentUser?.role === 'Cố vấn học tập') ? (
-                <Option value={currentUser?.classId}>{currentUser?.classId}</Option>
-              ) : (
-                <>
-                  <Option value="CLC01">CLC01</Option>
-                  <Option value="CLC02">CLC02</Option>
-                  <Option value="CLC03">CLC03</Option>
-                </>
-              )}
-            </Select>
-          </Form.Item>
+              <Form.Item name="class" label="Lớp" initialValue={(currentUser?.role === 'Lớp trưởng' || currentUser?.role === 'Cố vấn học tập') ? currentUser?.classId : "all"}>
+                <Select 
+                  showSearch 
+                  optionFilterProp="children" 
+                  style={{ width: 120 }}
+                  disabled={(currentUser?.role === 'Lớp trưởng' || currentUser?.role === 'Cố vấn học tập')}
+                >
+                  <Option value="all">Tất cả Lớp</Option>
+                  {(currentUser?.role === 'Lớp trưởng' || currentUser?.role === 'Cố vấn học tập') ? (
+                    <Option value={currentUser?.classId}>{currentUser?.classId}</Option>
+                  ) : (
+                    <>
+                      <Option value="CLC01">CLC01</Option>
+                      <Option value="CLC02">CLC02</Option>
+                      <Option value="CLC03">CLC03</Option>
+                    </>
+                  )}
+                </Select>
+              </Form.Item>
 
-          <Form.Item name="type" label="Loại danh sách" initialValue="all">
-            <Select showSearch optionFilterProp="children" style={{ width: 200 }}>
-              <Option value="all">Tất cả sinh viên</Option>
-              <Option value="reward">Danh sách khen thưởng</Option>
-              <Option value="warning">Danh sách cảnh cáo/kém</Option>
-            </Select>
-          </Form.Item>
+              <Form.Item name="type" label="Loại danh sách" initialValue="all">
+                <Select showSearch optionFilterProp="children" style={{ width: 200 }}>
+                  <Option value="all">Tất cả sinh viên</Option>
+                  <Option value="reward">Danh sách khen thưởng</Option>
+                  <Option value="warning">Danh sách cảnh cáo/kém</Option>
+                </Select>
+              </Form.Item>
 
-          <Form.Item>
-            <Button type="primary" htmlType="submit" icon={<FilterOutlined />}>Lọc dữ liệu</Button>
-          </Form.Item>
-        </Form>
+              <Form.Item>
+                <Button type="primary" htmlType="submit" icon={<FilterOutlined />}>Lọc dữ liệu</Button>
+              </Form.Item>
+            </Form>
 
-        <Table scroll={{ x: 'max-content' }} 
-          columns={columns} 
-          dataSource={filteredData} 
-          pagination={{ pageSize: 10 }}
-        />
+            <Table scroll={{ x: 'max-content' }} 
+              columns={columns} 
+              dataSource={filteredData} 
+              pagination={{ pageSize: 10 }}
+            />
+          </TabPane>
+          <TabPane tab="Tình trạng Xét duyệt" key="2">
+            <Table 
+              columns={[
+                { title: 'Lớp', dataIndex: 'className', key: 'className' },
+                { title: 'Sĩ số', dataIndex: 'totalStudents', key: 'totalStudents' },
+                { title: 'Đã nộp phiếu', dataIndex: 'submitted', key: 'submitted' },
+                { title: 'Đã duyệt xong', dataIndex: 'approvedSchool', key: 'approvedSchool' },
+                { title: 'Tỷ lệ hoàn thành', dataIndex: 'completionRate', key: 'completionRate', render: (rate: number) => `${rate}%` }
+              ]} 
+              dataSource={statusReport} 
+              rowKey="classId"
+            />
+          </TabPane>
+          <TabPane tab="Hồ sơ Bị từ chối / Thiếu minh chứng" key="3">
+            <Table 
+              columns={[
+                { title: 'MSSV', dataIndex: 'userId', key: 'userId' },
+                { title: 'Họ tên', dataIndex: 'userName', key: 'userName' },
+                { title: 'Lớp', dataIndex: 'classId', key: 'classId' },
+                { title: 'Vấn đề', dataIndex: 'issue', key: 'issue', render: (issue: string) => <Tag color="red">{issue}</Tag> },
+                { title: 'Phản hồi', dataIndex: 'feedback', key: 'feedback' }
+              ]} 
+              dataSource={issuesReport} 
+              rowKey="userId"
+            />
+          </TabPane>
+        </Tabs>
       </Card>
     </div>
   );

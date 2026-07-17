@@ -43,4 +43,18 @@ router.put('/grading', authMiddleware, async (req: any, res: any) => {
   }
 });
 
+// Lấy danh mục bộ lọc
+router.get('/categories', authMiddleware, async (req: any, res: any) => {
+  try {
+    const faculties = await prisma.faculty.findMany();
+    const majors = await prisma.major.findMany();
+    const cohorts = await prisma.cohort.findMany();
+    const educationLevels = await prisma.educationLevel.findMany();
+    
+    res.json({ faculties, majors, cohorts, educationLevels });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+
 export default router;

@@ -12,6 +12,7 @@ import evidencesRoutes from './routes/evidences';
 import settingsRoutes from './routes/settings';
 import semesterRoutes from './routes/semesters';
 import externalActivityRoutes from './routes/external-activities';
+import reportRoutes from './routes/reports';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -31,6 +32,7 @@ app.use('/api/evidences', evidencesRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/semesters', semesterRoutes);
 app.use('/api/external-activities', externalActivityRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Phục vụ file tĩnh trong thư mục uploads
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
