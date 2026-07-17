@@ -52,6 +52,8 @@ router.post('/login', async (req, res) => {
   }
 });
 
+import { authMiddleware } from '../middleware/auth';
+
 // Demo login without password
 router.post('/demo-login', async (req, res) => {
   try {
@@ -90,6 +92,30 @@ router.post('/demo-login', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Lỗi server khi đăng nhập nhanh' });
+  }
+});
+
+// Change password
+router.post('/change-password', authMiddleware, async (req: any, res: any) => {
+  try {
+    const { newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword }
+    });
+
+    res.json({ message: 'Đổi mật khẩu thành công' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Lỗi server khi đổi mật khẩu' });
   }
 });
 

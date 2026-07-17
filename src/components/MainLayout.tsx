@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Button, Dropdown, Avatar, theme, Grid } from 'antd';
+import { Layout, Menu, Button, Dropdown, Avatar, theme, Grid, Modal, Form, Input, message } from 'antd';
 import {
   DashboardOutlined,
   FormOutlined,
@@ -14,8 +14,10 @@ import {
   MenuUnfoldOutlined,
   MenuOutlined,
   UserAddOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import api from '../utils/api';
 
 const { Header, Sider, Content } = Layout;
 const { useBreakpoint } = Grid;
@@ -23,6 +25,9 @@ const { useBreakpoint } = Grid;
 export const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isChangePasswordVisible, setIsChangePasswordVisible] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [form] = Form.useForm();
   const navigate = useNavigate();
   const location = useLocation();
   const screens = useBreakpoint();
@@ -85,7 +90,27 @@ export const MainLayout: React.FC = () => {
     navigate('/login');
   };
 
+  const handleChangePassword = async (values: any) => {
+    if (values.newPassword !== values.confirmPassword) {
+      message.error('Mật khẩu nhập lại không khớp!');
+      return;
+    }
+    
+    try {
+      setChangingPassword(true);
+      await api.post('/auth/change-password', { newPassword: values.newPassword });
+      message.success('Đổi mật khẩu thành công!');
+      setIsChangePasswordVisible(false);
+      form.resetFields();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || 'Lỗi khi đổi mật khẩu');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const roleMenuItems = [
+    { key: 'change-password', label: 'Đổi mật khẩu', icon: <KeyOutlined />, onClick: () => setIsChangePasswordVisible(true) },
     { key: 'logout', label: 'Đăng xuất', icon: <LogoutOutlined />, onClick: handleLogout },
   ];
 
@@ -162,6 +187,61 @@ export const MainLayout: React.FC = () => {
           <Outlet context={{ currentUser }} />
         </Content>
       </Layout>
+
+      <Modal
+        title="Đổi mật khẩu"
+        open={isChangePasswordVisible}
+        onCancel={() => {
+          setIsChangePasswordVisible(false);
+          form.resetFields();
+        }}
+        footer={null}
+        destroyOnClose
+      >
+        <Form form={form} layout="vertical" onFinish={handleChangePassword}>
+          <Form.Item
+            name="newPassword"
+            label="Mật khẩu mới"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mật khẩu mới!' },
+              { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự!' }
+            ]}
+          >
+            <Input.Password placeholder="Nhập mật khẩu mới" />
+          </Form.Item>
+
+          <Form.Item
+            name="confirmPassword"
+            label="Nhập lại mật khẩu mới"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: 'Vui lòng nhập lại mật khẩu!' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('Mật khẩu nhập lại không khớp!'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="Nhập lại mật khẩu mới" />
+          </Form.Item>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button onClick={() => {
+              setIsChangePasswordVisible(false);
+              form.resetFields();
+            }}>
+              Hủy
+            </Button>
+            <Button type="primary" htmlType="submit" loading={changingPassword}>
+              Xác nhận
+            </Button>
+          </div>
+        </Form>
+      </Modal>
     </Layout>
   );
 };
