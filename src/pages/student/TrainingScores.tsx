@@ -222,14 +222,21 @@ export const TrainingScores: React.FC = () => {
   }, []);
 
   const totalScore = useMemo(() => {
-    let sum = 0;
-    Object.keys(scores).forEach(key => {
-      if (key.includes('.')) {
-        sum += Number(scores[key]) || 0;
-      }
+    let total = 0;
+    data.forEach(group => {
+      let groupSum = 0;
+      const maxMatch = group.criteria.match(/tối đa (\d+) điểm/);
+      const maxGroupPoint = maxMatch ? parseInt(maxMatch[1]) : 100;
+      
+      group.children?.forEach(child => {
+        if (scores[child.key]) {
+          groupSum += Number(scores[child.key]);
+        }
+      });
+      total += Math.min(groupSum, maxGroupPoint);
     });
-    return Math.max(0, Math.min(100, sum));
-  }, [scores]);
+    return Math.max(0, Math.min(100, total));
+  }, [scores, data]);
 
   const exclusiveGroups = [
     ['I.2.a', 'I.2.b', 'I.2.c'], // Kết quả học tập

@@ -65,6 +65,7 @@ export const TeamGrading: React.FC = () => {
           class: u.classId || 'Chưa phân lớp',
           role: u.role,
           status: frontendStatus,
+          selfScore: p ? p.studentSelfScore : 0,
           total: score,
           pointsData: p
         };
@@ -74,8 +75,8 @@ export const TeamGrading: React.FC = () => {
       // Auto select the first class available
       const classSet = new Set(usersData.map((u: any) => u.class));
       const classesArr = Array.from(classSet) as string[];
-      if (classesArr.length > 0 && !classesArr.includes(selectedClass)) {
-        setSelectedClass(classesArr[0]);
+      if (classesArr.length > 0) {
+        setSelectedClass(prev => classesArr.includes(prev) ? prev : classesArr[0]);
       }
     } catch (error) {
       message.error('Không thể tải dữ liệu sinh viên!');
@@ -150,10 +151,19 @@ export const TeamGrading: React.FC = () => {
     },
     {
       title: 'Điểm Tự ĐG',
+      dataIndex: 'selfScore',
+      key: 'selfScore',
+      render: (selfScore: number, record: any) => {
+        if (record.status === 'not_submitted') return <span className="text-gray-400">{selfScore} (Nháp)</span>;
+        return <span>{selfScore}</span>;
+      },
+    },
+    {
+      title: 'Tổng điểm',
       dataIndex: 'total',
       key: 'total',
       render: (total: number, record: any) => {
-        if (record.status === 'not_submitted') return <span className="font-bold text-gray-400">{total} (Nháp)</span>;
+        if (record.status === 'not_submitted') return <span className="font-bold text-gray-400">-</span>;
         return <span className="font-bold text-blue-600">{total}</span>;
       },
     },
@@ -423,8 +433,22 @@ export const TeamGrading: React.FC = () => {
                       <>
                         {renderedItems}
                         <div className="flex flex-col sm:flex-row justify-between gap-4 mt-4 pt-2 border-t-2 border-gray-300">
-                          <Text strong>Tổng điểm (Tự ĐG):</Text>
-                          <Text className="font-bold text-blue-600 text-lg">{selectedStudent.total}/100</Text>
+                          <Text strong>Tổng điểm (SV Tự ĐG):</Text>
+                          <Text className="font-bold text-blue-600 text-lg">{selectedStudent.selfScore}/100</Text>
+                        </div>
+                        <div className="flex flex-col sm:flex-row justify-between gap-4 mt-2 items-center">
+                          <Text strong>Điểm xét duyệt (Chấm lại nếu cần):</Text>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            className="w-24 text-center font-bold text-green-600 text-lg"
+                            value={selectedStudent.total}
+                            onChange={(e) => {
+                               const val = parseInt(e.target.value) || 0;
+                               setSelectedStudent((prev: any) => ({ ...prev, total: Math.min(100, Math.max(0, val)) }));
+                            }}
+                          />
                         </div>
                       </>
                     );

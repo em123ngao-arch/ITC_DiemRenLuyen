@@ -158,12 +158,23 @@ router.post('/submit', authMiddleware, async (req: any, res: any) => {
       });
 
       // Tính lại tổng điểm tự chấm của SV dựa trên newDetails đã được lọc sạch
-      const studentScore = Object.keys(newDetails)
-        .filter((k) => k.includes('.')) // Chỉ tính các tiêu chí con
-        .reduce((sum, k) => {
-          const val = Number(newDetails[k]) || 0;
-          return sum + val;
-        }, 0);
+      const groupMaxes: Record<string, number> = { 'I': 20, 'II': 25, 'III': 20, 'IV': 15, 'V': 20 };
+      const groupSums: Record<string, number> = { 'I': 0, 'II': 0, 'III': 0, 'IV': 0, 'V': 0 };
+      
+      Object.keys(newDetails).forEach(k => {
+        if (k.includes('.')) {
+          const group = k.split('.')[0];
+          if (groupSums[group] !== undefined) {
+            groupSums[group] += Number(newDetails[k]) || 0;
+          }
+        }
+      });
+      
+      let studentScore = 0;
+      Object.keys(groupSums).forEach(group => {
+        studentScore += Math.min(groupSums[group], groupMaxes[group]);
+      });
+      studentScore = Math.max(0, Math.min(100, studentScore));
 
       point = await prisma.point.update({
         where: { id: existingPoint.id },
@@ -184,12 +195,23 @@ router.post('/submit', authMiddleware, async (req: any, res: any) => {
         newDetails[key] = 0;
       });
 
-      const studentScore = Object.keys(newDetails)
-        .filter((k) => k.includes('.'))
-        .reduce((sum, k) => {
-          const val = Number(newDetails[k]) || 0;
-          return sum + val;
-        }, 0);
+      const groupMaxes: Record<string, number> = { 'I': 20, 'II': 25, 'III': 20, 'IV': 15, 'V': 20 };
+      const groupSums: Record<string, number> = { 'I': 0, 'II': 0, 'III': 0, 'IV': 0, 'V': 0 };
+      
+      Object.keys(newDetails).forEach(k => {
+        if (k.includes('.')) {
+          const group = k.split('.')[0];
+          if (groupSums[group] !== undefined) {
+            groupSums[group] += Number(newDetails[k]) || 0;
+          }
+        }
+      });
+      
+      let studentScore = 0;
+      Object.keys(groupSums).forEach(group => {
+        studentScore += Math.min(groupSums[group], groupMaxes[group]);
+      });
+      studentScore = Math.max(0, Math.min(100, studentScore));
 
       point = await prisma.point.create({
         data: {
