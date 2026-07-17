@@ -213,7 +213,7 @@ export const TeamGrading: React.FC = () => {
   const getRequiredPreviousStatus = () => {
     if (currentUser?.role === 'Quản trị hệ thống' || currentUser?.role === 'Phòng Công tác sinh viên') return 'approved_advisor';
     if (currentUser?.role === 'Cố vấn học tập') return 'approved_monitor';
-    return 'Chờ duyệt';
+    return 'pending';
   };
 
   const handleApproveSingle = async () => {
