@@ -147,10 +147,23 @@ router.post('/submit', authMiddleware, async (req: any, res: any) => {
         console.error(e);
       }
 
+      // Calculate activity points and unmapped bonus first
+      const evidences = await prisma.evidence.findMany({
+        where: { userId },
+        include: { activity: true }
+      });
+      const activityPoints = evidences.reduce((sum, ev) => sum + (ev.activity?.points || 0), 0);
+      const p1 = Math.min(activityPoints, 3);
+      const p2 = Math.min(Math.max(0, activityPoints - p1), 5);
+      
       // Khóa cứng giá trị: Nếu db đã có sẵn điểm tự động thì ghi đè lại giá trị từ db,
       // nếu db chưa có thì bắt buộc bằng 0 (không cho phép client tự gửi điểm khống lên).
       lockedKeys.forEach((key) => {
-        if (oldDetails[key] !== undefined) {
+        if (key === 'III.1.a') {
+          newDetails[key] = p1;
+        } else if (key === 'III.2.a') {
+          newDetails[key] = p2;
+        } else if (oldDetails[key] !== undefined) {
           newDetails[key] = oldDetails[key];
         } else {
           newDetails[key] = 0;
@@ -175,15 +188,7 @@ router.post('/submit', authMiddleware, async (req: any, res: any) => {
         studentScore += Math.min(groupSums[group], groupMaxes[group]);
       });
 
-      // Calculate activity points and unmapped bonus
-      const evidences = await prisma.evidence.findMany({
-        where: { userId },
-        include: { activity: true }
-      });
-      const activityPoints = evidences.reduce((sum, ev) => sum + (ev.activity?.points || 0), 0);
-      const mappedPoints = Math.min(activityPoints, 8);
-      const unmappedBonus = activityPoints - mappedPoints;
-      
+      const unmappedBonus = Math.max(0, activityPoints - p1 - p2);
       studentScore += unmappedBonus;
       studentScore = Math.max(0, Math.min(100, studentScore));
 
@@ -201,9 +206,24 @@ router.post('/submit', authMiddleware, async (req: any, res: any) => {
       });
     } else {
       let newDetails = details ? { ...details } : {};
+      // Calculate activity points and unmapped bonus first
+      const evidences = await prisma.evidence.findMany({
+        where: { userId },
+        include: { activity: true }
+      });
+      const activityPoints = evidences.reduce((sum, ev) => sum + (ev.activity?.points || 0), 0);
+      const p1 = Math.min(activityPoints, 3);
+      const p2 = Math.min(Math.max(0, activityPoints - p1), 5);
+
       // Bắt buộc reset các cột tự động về 0 nếu tạo mới bảng điểm trực tiếp (chưa đồng bộ Excel/quét QR)
       lockedKeys.forEach((key) => {
-        newDetails[key] = 0;
+        if (key === 'III.1.a') {
+          newDetails[key] = p1;
+        } else if (key === 'III.2.a') {
+          newDetails[key] = p2;
+        } else {
+          newDetails[key] = 0;
+        }
       });
 
       const groupMaxes: Record<string, number> = { 'I': 20, 'II': 25, 'III': 20, 'IV': 15, 'V': 20 };
@@ -223,15 +243,7 @@ router.post('/submit', authMiddleware, async (req: any, res: any) => {
         studentScore += Math.min(groupSums[group], groupMaxes[group]);
       });
 
-      // Calculate activity points and unmapped bonus
-      const evidences = await prisma.evidence.findMany({
-        where: { userId },
-        include: { activity: true }
-      });
-      const activityPoints = evidences.reduce((sum, ev) => sum + (ev.activity?.points || 0), 0);
-      const mappedPoints = Math.min(activityPoints, 8);
-      const unmappedBonus = activityPoints - mappedPoints;
-      
+      const unmappedBonus = Math.max(0, activityPoints - p1 - p2);
       studentScore += unmappedBonus;
       studentScore = Math.max(0, Math.min(100, studentScore));
 
