@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id // Mã số HSSV hoặc Admin ID
+  name      String
+  role      String   // Sinh viên, Ban cán sự lớp, Cố vấn học tập, Phòng Công tác sinh viên, Quản trị hệ thống, Đơn vị tổ chức hoạt động, Phòng Đào tạo
+  password  String
+  status    String   @default("Hoạt động") // Hoạt động, Tạm khóa
+  classId   String?
+  cohortId  String?
+  majorId   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  class     Class?   @relation(fields: [classId], references: [id])
+  cohort    Cohort?  @relation(fields: [cohortId], references: [id])
+  major     Major?   @relation(fields: [majorId], references: [id])
+  evidences Evidence[]
+  points    Point[]
+  registrations Registration[]
+  externalActivities ExternalActivity[]
+}
+
+model Class {
+  id        String   @id // Mã lớp, VD: CLC01
+  name      String
+  advisorId String?  // ID của Cố vấn học tập
+  facultyId String?
+  majorId   String?
+  cohortId  String?
+
+  users     User[]
+  faculty   Faculty? @relation(fields: [facultyId], references: [id])
+  major     Major?   @relation(fields: [majorId], references: [id])
+  cohort    Cohort?  @relation(fields: [cohortId], references: [id])
+}
+
+model Activity {
+  id             String   @id @default(uuid())
+  eventName      String
+  startTime      DateTime
+  endTime        DateTime
+  location       String
+  points         Int
+  status         String   @default("Đang diễn ra") // Nháp, Đã công bố, Đang diễn ra, Đã kết thúc, Đã hủy
+  creatorId      String?
+  targetAudience String?  // Toàn trường, Khoa CNTT, v.v.
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  evidences      Evidence[]
+  registrations  Registration[]
+}
+
+model Registration {
+  id          String   @id @default(uuid())
+  userId      String
+  activityId  String
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+  activity    Activity @relation(fields: [activityId], references: [id])
+
+  @@unique([userId, activityId])
+}
+
+model Evidence {
+  id          String   @id @default(uuid())
+  userId      String
+  activityId  String?
+  description String?
+  imageUrl    String?
+  status      String   @default("Chờ duyệt") // Chờ duyệt, Đã duyệt, Từ chối, Đã lưu vào kho
+  category    String?  // Phân loại minh chứng cá nhân: dao_duc, quy_che...
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id])
+  activity    Activity? @relation(fields: [activityId], references: [id])
+}
+
+model Point {
+  id              String   @id @default(uuid())
+  userId          String
+  semester        String   // VD: HK1_2023_2024
+  studentSelfScore Int     @default(0)
+  monitorScore    Int?
+  advisorScore    Int?
+  finalScore      Int?
+  details         String?  // JSON string containing detailed scores
+  proofs          String?  // JSON string containing proof URLs
+  status          String   @default("Chưa đánh giá") // Chưa đánh giá, Chờ duyệt, Đã duyệt, Từ chối
+  feedback        String?  // Lý do từ chối/bác bỏ
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id])
+  auditLogs       AuditLog[]
+}
+
+model Setting {
+  id    String @id @default("global")
+  key   String @unique
+  value String
+}
+
+model Faculty {
+  id        String   @id @default(uuid())
+  name      String
+  classes   Class[]
+}
+
+model Major {
+  id        String   @id @default(uuid())
+  name      String
+  facultyId String?
+  classes   Class[]
+  users     User[]
+}
+
+model Cohort {
+  id        String   @id @default(uuid())
+  name      String
+  classes   Class[]
+  users     User[]
+}
+
+model Semester {
+  id        String   @id // e.g., HK1_2025_2026
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  isLocked  Boolean  @default(false)
+}
+
+model ExternalActivity {
+  id           String   @id @default(uuid())
+  userId       String
+  name         String
+  organizer    String
+  description  String?
+  scoreRequest Int
+  proofUrl     String
+  status       String   @default("Chờ duyệt")
+  feedback     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  pointId     String
+  actionBy    String
+  actionName  String
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  point       Point    @relation(fields: [pointId], references: [id])
+}
