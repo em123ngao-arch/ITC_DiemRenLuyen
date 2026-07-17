@@ -174,6 +174,17 @@ router.post('/submit', authMiddleware, async (req: any, res: any) => {
       Object.keys(groupSums).forEach(group => {
         studentScore += Math.min(groupSums[group], groupMaxes[group]);
       });
+
+      // Calculate activity points and unmapped bonus
+      const evidences = await prisma.evidence.findMany({
+        where: { userId },
+        include: { activity: true }
+      });
+      const activityPoints = evidences.reduce((sum, ev) => sum + (ev.activity?.points || 0), 0);
+      const mappedPoints = Math.min(activityPoints, 8);
+      const unmappedBonus = activityPoints - mappedPoints;
+      
+      studentScore += unmappedBonus;
       studentScore = Math.max(0, Math.min(100, studentScore));
 
       point = await prisma.point.update({
@@ -211,6 +222,17 @@ router.post('/submit', authMiddleware, async (req: any, res: any) => {
       Object.keys(groupSums).forEach(group => {
         studentScore += Math.min(groupSums[group], groupMaxes[group]);
       });
+
+      // Calculate activity points and unmapped bonus
+      const evidences = await prisma.evidence.findMany({
+        where: { userId },
+        include: { activity: true }
+      });
+      const activityPoints = evidences.reduce((sum, ev) => sum + (ev.activity?.points || 0), 0);
+      const mappedPoints = Math.min(activityPoints, 8);
+      const unmappedBonus = activityPoints - mappedPoints;
+      
+      studentScore += unmappedBonus;
       studentScore = Math.max(0, Math.min(100, studentScore));
 
       point = await prisma.point.create({

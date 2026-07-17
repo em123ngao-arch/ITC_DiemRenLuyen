@@ -162,17 +162,21 @@ export const TrainingScores: React.FC = () => {
     fetchConfig();
   }, []);
 
+  const [activityPoints, setActivityPoints] = useState(0);
+
   useEffect(() => {
     const fetchPoint = async () => {
       try {
         let autoScores: any = {};
+        let actPoints = 0;
         try {
           const actRes = await api.get('/activities');
           const checkedInActs = actRes.data.filter((a: any) => a.hasCheckedIn);
-          const totalActPoints = checkedInActs.reduce((sum: number, act: any) => sum + act.points, 0);
+          actPoints = checkedInActs.reduce((sum: number, act: any) => sum + act.points, 0);
+          setActivityPoints(actPoints);
           
-          if (totalActPoints > 0) {
-            let remain = totalActPoints;
+          if (actPoints > 0) {
+            let remain = actPoints;
             const p1 = Math.min(remain, 3);
             autoScores['III.1.a'] = p1;
             remain -= p1;
@@ -229,14 +233,25 @@ export const TrainingScores: React.FC = () => {
       const maxGroupPoint = maxMatch ? parseInt(maxMatch[1]) : 100;
       
       group.children?.forEach(child => {
+        // Skip keys that are auto-mapped from activity points if we are adding activityPoints directly
+        // But wait! If we add activityPoints directly, we must NOT sum III.1.a and III.2.a if they come from activities,
+        // or we just remove the auto-mapping above and let activityPoints be a pure bonus!
+        // But the user said "cộng vào tổng điểm luôn", which means bonus!
         if (scores[child.key]) {
           groupSum += Number(scores[child.key]);
         }
       });
       total += Math.min(groupSum, maxGroupPoint);
     });
+    // If we add activityPoints directly, we should subtract the mapped part to avoid double counting,
+    // OR we just remove the mapping above. Let's just add the unmapped remainder!
+    // Mapped points = min(actPoints, 3) + min(max(actPoints-3, 0), 5) = min(actPoints, 8)
+    const mappedPoints = Math.min(activityPoints, 8);
+    const unmappedBonus = activityPoints - mappedPoints;
+    total += unmappedBonus;
+    
     return Math.max(0, Math.min(100, total));
-  }, [scores, data]);
+  }, [scores, data, activityPoints]);
 
   const exclusiveGroups = [
     ['I.2.a', 'I.2.b', 'I.2.c'], // Kết quả học tập
