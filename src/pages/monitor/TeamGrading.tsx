@@ -312,7 +312,7 @@ export const TeamGrading: React.FC = () => {
                   setSelectedStudent(null);
                 }} 
                 style={{ width: 150 }}
-                disabled={currentUser?.role === 'Ban cán sự lớp' || currentUser?.role === 'Cố vấn học tập'}
+                disabled={!!currentUser?.classId && (currentUser?.role === 'Ban cán sự lớp' || currentUser?.role === 'Cố vấn học tập')}
               >
                 {classes.map(c => <Option key={c} value={c as string}>{c as string}</Option>)}
               </Select>
